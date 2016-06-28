@@ -79,6 +79,8 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 
 void one_step(stepper_state_t *stepper, int8_t direction)
 {
+  uint8_t latch_state = 0;
+  
   if (direction == DIRECTION_BACKWARD && stepper->current_step == 0) {
     stepper->current_step = 7;
   } else {
@@ -86,60 +88,40 @@ void one_step(stepper_state_t *stepper, int8_t direction)
     stepper->current_step %= 8; // roll over
   }
   
-  
   set_pin(stepper, stepper->pwm_a_pin, 1);
   set_pin(stepper, stepper->pwm_b_pin, 1);
   
   switch (stepper->current_step) {
     case 0:
-      set_pin(stepper, stepper->a_in1_pin, 1);
-      set_pin(stepper, stepper->a_in2_pin, 0);
-      set_pin(stepper, stepper->b_in1_pin, 0);
-      set_pin(stepper, stepper->b_in2_pin, 0);
+      latch_state = 0x8;
       break;
     case 1:
-      set_pin(stepper, stepper->a_in1_pin, 1);
-      set_pin(stepper, stepper->a_in2_pin, 0);
-      set_pin(stepper, stepper->b_in1_pin, 1);
-      set_pin(stepper, stepper->b_in2_pin, 0);
+      latch_state = 0xa;
       break;
     case 2:
-      set_pin(stepper, stepper->a_in1_pin, 0);
-      set_pin(stepper, stepper->a_in2_pin, 0);
-      set_pin(stepper, stepper->b_in1_pin, 1);
-      set_pin(stepper, stepper->b_in2_pin, 0);
+      latch_state = 0x2;
       break;
     case 3:
-      set_pin(stepper, stepper->a_in1_pin, 0);
-      set_pin(stepper, stepper->a_in2_pin, 1);
-      set_pin(stepper, stepper->b_in1_pin, 1);
-      set_pin(stepper, stepper->b_in2_pin, 0);
+      latch_state = 0x6;
       break;    
     case 4:
-      set_pin(stepper, stepper->a_in1_pin, 0);
-      set_pin(stepper, stepper->a_in2_pin, 1);
-      set_pin(stepper, stepper->b_in1_pin, 0);
-      set_pin(stepper, stepper->b_in2_pin, 0);
+      latch_state = 0x4;
       break;
     case 5:
-      set_pin(stepper, stepper->a_in1_pin, 0);
-      set_pin(stepper, stepper->a_in2_pin, 1);
-      set_pin(stepper, stepper->b_in1_pin, 0);
-      set_pin(stepper, stepper->b_in2_pin, 1);
+      latch_state = 0x5;
       break;
     case 6:
-      set_pin(stepper, stepper->a_in1_pin, 0);
-      set_pin(stepper, stepper->a_in2_pin, 0);
-      set_pin(stepper, stepper->b_in1_pin, 0);
-      set_pin(stepper, stepper->b_in2_pin, 1);
+      latch_state = 0x1;
       break;
     case 7:
-      set_pin(stepper, stepper->a_in1_pin, 1);
-      set_pin(stepper, stepper->a_in2_pin, 0);
-      set_pin(stepper, stepper->b_in1_pin, 0);
-      set_pin(stepper, stepper->b_in2_pin, 1);
+      latch_state = 0x9;
       break;
   }
+  
+  set_pin(stepper, stepper->b_in2_pin, latch_state & 0x1);
+  set_pin(stepper, stepper->b_in1_pin, latch_state & 0x2);
+  set_pin(stepper, stepper->a_in2_pin, latch_state & 0x4);
+  set_pin(stepper, stepper->a_in1_pin, latch_state & 0x8);
 }
 
 
