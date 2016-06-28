@@ -2,7 +2,6 @@
 #include <Wire.h>
 #include <stdint.h>
 
-#include "multistepper.h"
 
 #define PCA9685_MODE1 0x0
 #define PCA9685_PRESCALE 0xFE
@@ -124,10 +123,10 @@ static void set_pin(stepper_state_t *stepper, uint8_t pin, uint8_t value)
 
 void init_pca9685(uint8_t i2c_addr, uint16_t freq_Hz)
 {
-  WIRE.begin();
+  Wire.begin();
   
   // reset PCA9685
-  write_pca9885_byte(PCA9685_MODE1, 0x0);
+  write_pca9885_byte(i2c_addr, PCA9685_MODE1, 0x0);
   
   set_pwm_frequency(i2c_addr, freq_Hz);
   
@@ -156,31 +155,31 @@ static void set_pwm_frequency(uint8_t i2c_addr, uint16_t freq_Hz)
 }
 
 void set_pin_pwm_dutycycle(uint8_t i2c_addr, uint8_t num, uint16_t on, uint16_t off) {
-  WIRE.beginTransmission(i2c_addr);
+  Wire.beginTransmission(i2c_addr);
 
-  WIRE.write(LED0_ON_L + 4 * num);
-  WIRE.write((on & 0xFF));       // ON value low byte
-  WIRE.write((on >> 8) & 0xFF)); // ON value high byte 
-  WIRE.write(off & 0xFF);        // OFF value low byte
-  WIRE.write((off >> 8) & 0xFF); // ON value high byte
+  Wire.write(LED0_ON_L + 4 * num);
+  Wire.write((on & 0xFF));       // ON value low byte
+  Wire.write((on >> 8) & 0xFF); // ON value high byte 
+  Wire.write(off & 0xFF);        // OFF value low byte
+  Wire.write((off >> 8) & 0xFF); // ON value high byte
 
-  WIRE.endTransmission();
+  Wire.endTransmission();
 }
 
 
 static uint8_t read_pca9885_byte(uint8_t i2c_addr, uint8_t addr) {
-  WIRE.beginTransmission(i2c_addr);
-  WIRE.write(addr);
-  WIRE.endTransmission(); /* partial transfer */
+  Wire.beginTransmission(i2c_addr);
+  Wire.write(addr);
+  Wire.endTransmission(); /* partial transfer */
 
-  WIRE.requestFrom((uint8_t)_i2caddr, (uint8_t)1);
-  return WIRE.read();
+  Wire.requestFrom((uint8_t)i2c_addr, (uint8_t)1);
+  return Wire.read();
 }
 
 static void write_pca9885_byte(uint8_t i2c_addr, uint8_t addr, uint8_t d) {
-  WIRE.beginTransmission(i2c_addr);
-  WIRE.write(addr);
-  WIRE.write(d);
-  WIRE.endTransmission();
+  Wire.beginTransmission(i2c_addr);
+  Wire.write(addr);
+  Wire.write(d);
+  Wire.endTransmission();
 }
 
