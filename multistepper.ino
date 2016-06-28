@@ -36,13 +36,13 @@ void loop()
   for (uint8_t i = 0; i<255; i++)
   {
     one_step(&stepper, DIRECTION_FORWARD);
-    delay(20);
+    delay(5);
   }
   
   for (uint8_t i = 0; i<255; i++)
   {
     one_step(&stepper, DIRECTION_BACKWARD);
-    delay(20);
+    delay(5);
   }  
 }
 
@@ -80,48 +80,72 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 void one_step(stepper_state_t *stepper, int8_t direction)
 {
   if (direction == DIRECTION_BACKWARD && stepper->current_step == 0) {
-    stepper->current_step = 3;
+    stepper->current_step = 7;
   } else {
     stepper->current_step += direction;    
-    stepper->current_step %= 4; // roll over
+    stepper->current_step %= 8; // roll over
   }
   
   
-  set_pin(stepper, stepper->pwm_a_pin, HIGH);
-  set_pin(stepper, stepper->pwm_b_pin, HIGH);
+  set_pin(stepper, stepper->pwm_a_pin, 1);
+  set_pin(stepper, stepper->pwm_b_pin, 1);
   
   switch (stepper->current_step) {
     case 0:
-      set_pin(stepper, stepper->a_in1_pin, HIGH);
-      set_pin(stepper, stepper->a_in2_pin, LOW);
-      set_pin(stepper, stepper->b_in1_pin, HIGH);
-      set_pin(stepper, stepper->b_in2_pin, LOW);
+      set_pin(stepper, stepper->a_in1_pin, 1);
+      set_pin(stepper, stepper->a_in2_pin, 0);
+      set_pin(stepper, stepper->b_in1_pin, 0);
+      set_pin(stepper, stepper->b_in2_pin, 0);
       break;
     case 1:
-      set_pin(stepper, stepper->a_in1_pin, LOW);
-      set_pin(stepper, stepper->a_in2_pin, HIGH);
-      set_pin(stepper, stepper->b_in1_pin, HIGH);
-      set_pin(stepper, stepper->b_in2_pin, LOW);
+      set_pin(stepper, stepper->a_in1_pin, 1);
+      set_pin(stepper, stepper->a_in2_pin, 0);
+      set_pin(stepper, stepper->b_in1_pin, 1);
+      set_pin(stepper, stepper->b_in2_pin, 0);
       break;
     case 2:
-      set_pin(stepper, stepper->a_in1_pin, LOW);
-      set_pin(stepper, stepper->a_in2_pin, HIGH);
-      set_pin(stepper, stepper->b_in1_pin, LOW);
-      set_pin(stepper, stepper->b_in2_pin, HIGH);
+      set_pin(stepper, stepper->a_in1_pin, 0);
+      set_pin(stepper, stepper->a_in2_pin, 0);
+      set_pin(stepper, stepper->b_in1_pin, 1);
+      set_pin(stepper, stepper->b_in2_pin, 0);
       break;
     case 3:
-      set_pin(stepper, stepper->a_in1_pin, HIGH);
-      set_pin(stepper, stepper->a_in2_pin, LOW);
-      set_pin(stepper, stepper->b_in1_pin, LOW);
-      set_pin(stepper, stepper->b_in2_pin, HIGH);
+      set_pin(stepper, stepper->a_in1_pin, 0);
+      set_pin(stepper, stepper->a_in2_pin, 1);
+      set_pin(stepper, stepper->b_in1_pin, 1);
+      set_pin(stepper, stepper->b_in2_pin, 0);
       break;    
+    case 4:
+      set_pin(stepper, stepper->a_in1_pin, 0);
+      set_pin(stepper, stepper->a_in2_pin, 1);
+      set_pin(stepper, stepper->b_in1_pin, 0);
+      set_pin(stepper, stepper->b_in2_pin, 0);
+      break;
+    case 5:
+      set_pin(stepper, stepper->a_in1_pin, 0);
+      set_pin(stepper, stepper->a_in2_pin, 1);
+      set_pin(stepper, stepper->b_in1_pin, 0);
+      set_pin(stepper, stepper->b_in2_pin, 1);
+      break;
+    case 6:
+      set_pin(stepper, stepper->a_in1_pin, 0);
+      set_pin(stepper, stepper->a_in2_pin, 0);
+      set_pin(stepper, stepper->b_in1_pin, 0);
+      set_pin(stepper, stepper->b_in2_pin, 1);
+      break;
+    case 7:
+      set_pin(stepper, stepper->a_in1_pin, 1);
+      set_pin(stepper, stepper->a_in2_pin, 0);
+      set_pin(stepper, stepper->b_in1_pin, 0);
+      set_pin(stepper, stepper->b_in2_pin, 1);
+      break;
   }
 }
 
 
 static void set_pin(stepper_state_t *stepper, uint8_t pin, uint8_t value)
 {
-  set_pin_pwm_dutycycle(stepper->i2c_addr, pin, (value == LOW ? 0 : 4096), 0);
+  set_pin_pwm_dutycycle(stepper->i2c_addr, pin, (value == 0 ? 0 : 4096), 0);
 }
 
 
