@@ -36,13 +36,13 @@ void loop()
   for (uint8_t i = 0; i<255; i++)
   {
     one_step(&stepper, DIRECTION_FORWARD);
-    delay(5);
+    delay(20);
   }
   
   for (uint8_t i = 0; i<255; i++)
   {
     one_step(&stepper, DIRECTION_BACKWARD);
-    delay(5);
+    delay(20);
   }  
 }
 
@@ -79,8 +79,13 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 
 void one_step(stepper_state_t *stepper, int8_t direction)
 {
-  stepper->current_step += direction; // count on overflow
-  stepper->current_step %= 4; // roll over
+  if (direction == DIRECTION_BACKWARD && stepper->current_step == 0) {
+    stepper->current_step = 3;
+  } else {
+    stepper->current_step += direction;    
+    stepper->current_step %= 4; // roll over
+  }
+  
   
   set_pin(stepper, stepper->pwm_a_pin, HIGH);
   set_pin(stepper, stepper->pwm_b_pin, HIGH);
