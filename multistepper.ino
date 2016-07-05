@@ -46,7 +46,7 @@ void loop()
   for (uint16_t i = 0; i<400; i++)
   {
     one_step(&stepper1, DIRECTION_BACKWARD);
-    delay(50);
+    delay(10);
     one_step(&stepper2, DIRECTION_FORWARD);
     one_step(&stepper2, DIRECTION_FORWARD);
   }
@@ -172,6 +172,10 @@ static void set_pins(stepper_state_t *stepper, uint8_t *values)
 void init_pca9685(uint8_t i2c_addr, uint16_t freq_Hz)
 {
   Wire.begin();
+ 
+  /* Hack to increase I2C speed for faster comms */
+  #define TWI_FREQ 800000L
+  TWBR = ((F_CPU / TWI_FREQ) - 16) / 2;
   
   // reset PCA9685
   write_pca9885_byte(i2c_addr, PCA9685_MODE1, 0x0);
