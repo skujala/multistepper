@@ -22,28 +22,41 @@ typedef struct {
 } stepper_state_t;
 
 
-stepper_state_t stepper;
+stepper_state_t stepper1;
+stepper_state_t stepper2;
 
 void setup()
 {
   init_pca9685(0x60, 1600);
-  init_stepper(0, 0x60, &stepper);
+  init_stepper(0, 0x60, &stepper1);
+  init_stepper(1, 0x60, &stepper2);
 }
 
 
 void loop()
 {
-  for (uint8_t i = 0; i<255; i++)
+  // Simple acceleration sequence
+  for (uint16_t i = 0; i<1600; i++)
   {
-    one_step(&stepper, DIRECTION_FORWARD);
-    delay(5);
+    one_step(&stepper1, DIRECTION_FORWARD);
+    delay(1);
+    one_step(&stepper2, DIRECTION_FORWARD);
   }
   
-  for (uint8_t i = 0; i<255; i++)
+  delay(250);
+  
+  for (uint16_t i = 0; i<1600; i++)
   {
-    one_step(&stepper, DIRECTION_BACKWARD);
-    delay(5);
-  }  
+    one_step(&stepper1, DIRECTION_BACKWARD);
+    delay(25);
+    one_step(&stepper2, DIRECTION_BACKWARD);
+    one_step(&stepper2, DIRECTION_BACKWARD);
+  }
+  
+  set_pin(&stepper1, stepper1.pwm_a_pin, 0);
+  set_pin(&stepper1, stepper2.pwm_b_pin, 0);
+  
+  delay(15000);
 }
 
 
