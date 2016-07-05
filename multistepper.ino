@@ -35,28 +35,29 @@ void setup()
 
 void loop()
 {
-  // Simple acceleration sequence
   for (uint16_t i = 0; i<1600; i++)
   {
     one_step(&stepper1, DIRECTION_FORWARD);
-    delay(1);
-    one_step(&stepper2, DIRECTION_FORWARD);
+    one_step(&stepper2, DIRECTION_BACKWARD);
   }
   
   delay(250);
   
-  for (uint16_t i = 0; i<1600; i++)
+  for (uint16_t i = 0; i<400; i++)
   {
     one_step(&stepper1, DIRECTION_BACKWARD);
-    delay(25);
-    one_step(&stepper2, DIRECTION_BACKWARD);
-    one_step(&stepper2, DIRECTION_BACKWARD);
+    delay(50);
+    one_step(&stepper2, DIRECTION_FORWARD);
+    one_step(&stepper2, DIRECTION_FORWARD);
   }
   
   set_pin(&stepper1, stepper1.pwm_a_pin, 0);
-  set_pin(&stepper1, stepper2.pwm_b_pin, 0);
+  set_pin(&stepper1, stepper1.pwm_b_pin, 0);
+  set_pin(&stepper2, stepper2.pwm_a_pin, 0);
+  set_pin(&stepper2, stepper2.pwm_b_pin, 0);
+
   
-  delay(15000);
+  delay(25000);
 }
 
 
@@ -73,18 +74,18 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
       stepper->pwm_a_pin = 8;
       stepper->a_in2_pin = 9;
       stepper->a_in1_pin = 10;
-      stepper->pwm_b_pin = 13;
-      stepper->b_in2_pin = 12;
       stepper->b_in1_pin = 11;
+      stepper->b_in2_pin = 12;
+      stepper->pwm_b_pin = 13;
       break;
     
     case 1:
       stepper->pwm_a_pin = 2;
       stepper->a_in2_pin = 3;
       stepper->a_in1_pin = 4;
-      stepper->pwm_b_pin = 7;
-      stepper->b_in2_pin = 6;
       stepper->b_in1_pin = 5;
+      stepper->b_in2_pin = 6;
+      stepper->pwm_b_pin = 7;
       break;
   }  
 }
@@ -93,6 +94,7 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 void one_step(stepper_state_t *stepper, int8_t direction)
 {
   uint8_t latch_state = 0;
+  uint8_t msg[4];
   
   if (direction == DIRECTION_BACKWARD && stepper->current_step == 0) {
     stepper->current_step = 7;
@@ -131,10 +133,12 @@ void one_step(stepper_state_t *stepper, int8_t direction)
       break;
   }
   
-  set_pin(stepper, stepper->b_in2_pin, latch_state & 0x1);
-  set_pin(stepper, stepper->b_in1_pin, latch_state & 0x2);
-  set_pin(stepper, stepper->a_in2_pin, latch_state & 0x4);
-  set_pin(stepper, stepper->a_in1_pin, latch_state & 0x8);
+  msg[0] = latch_state & 0x4; // A_in2
+  msg[1] = latch_state & 0x8; // A_in1
+  msg[2] = latch_state & 0x2; // B_in1
+  msg[3] = latch_state & 0x1; // B_in2
+   
+  set_pins(stepper, msg);
 }
 
 
@@ -143,7 +147,27 @@ static void set_pin(stepper_state_t *stepper, uint8_t pin, uint8_t value)
   set_pin_pwm_dutycycle(stepper->i2c_addr, pin, (value == 0 ? 0 : 4096), 0);
 }
 
+static void set_pins(stepper_state_t *stepper, uint8_t *values)
+{
+  uint8_t on, i;
+  
+  Wire.beginTransmission(stepper->i2c_addr);
 
+  /* A_in2_pin */
+  Wire.write(LED0_ON_L + 4 * stepper->a_in2_pin);
+
+  for (i = 0; i < 4; i++) {
+    on = (*values == 0 ? 0 : 0x10);
+    Wire.write(0x00); // ON value low byte
+    Wire.write(on);   // ON value high byte 
+    Wire.write(0x00); // OFF value low byte
+    Wire.write(0x00); // ON value high byte
+    
+    values++;
+  }
+  
+  Wire.endTransmission();
+}
 
 void init_pca9685(uint8_t i2c_addr, uint16_t freq_Hz)
 {
@@ -175,7 +199,7 @@ static void set_pwm_frequency(uint8_t i2c_addr, uint16_t freq_Hz)
   
   // Set MODE1 register to autoincrement
   // Besides, why is this 0xA1 -- Restart, Auto increment, and Respond to All Call I2C
-  write_pca9885_byte(i2c_addr, PCA9685_MODE1, oldmode | 0xa1); 
+  write_pca9885_byte(i2c_addr, PCA9685_MODE1, oldmode | 0xa1);  
 }
 
 void set_pin_pwm_dutycycle(uint8_t i2c_addr, uint8_t num, uint16_t on, uint16_t off) {
