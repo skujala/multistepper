@@ -5,7 +5,7 @@ My attempt to simplify the seemingly convoluted and largely undocumented code Ad
 
 Missing elements:
 
-* Computing how to move two motors "simultaneously"
+* ~~Computing how to move two motors "simultaneously"~~
 * Acceleration and deceleration of the stepper motor
 * ...
 
