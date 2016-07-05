@@ -16,7 +16,7 @@ typedef struct {
   uint8_t pwm_a_pin, a_in1_pin, a_in2_pin;
   uint8_t pwm_b_pin, b_in1_pin, b_in2_pin;
   
-  uint8_t current_step;
+  uint8_t *latch_state;
   
   uint8_t i2c_addr;
 } stepper_state_t;
@@ -24,6 +24,8 @@ typedef struct {
 
 stepper_state_t stepper1;
 stepper_state_t stepper2;
+
+uint8_t latch_states[] = {0x08, 0x0A, 0x02, 0x06, 0x04, 0x05, 0x01, 0x09};
 
 void setup()
 {
@@ -41,13 +43,20 @@ void loop()
     one_step(&stepper2, DIRECTION_BACKWARD);
   }
   
-  delay(250);
+  delay(500);
+  set_pin(&stepper1, stepper1.pwm_a_pin, 0);
+  set_pin(&stepper1, stepper1.pwm_b_pin, 0);
+  set_pin(&stepper2, stepper2.pwm_a_pin, 0);
+  set_pin(&stepper2, stepper2.pwm_b_pin, 0);
+
+
   
   for (uint16_t i = 0; i<400; i++)
   {
     one_step(&stepper1, DIRECTION_BACKWARD);
-    delay(10);
+    delay(5);
     one_step(&stepper2, DIRECTION_FORWARD);
+    delay(5);
     one_step(&stepper2, DIRECTION_FORWARD);
   }
   
@@ -67,10 +76,12 @@ void loop()
 void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 {
   stepper->i2c_addr = i2c_addr;
-  stepper->current_step = 0;
+  stepper->latch_state = &latch_states[0];
+  
+  /* Initialize which PCA9685 pins belong to which motor */
   
   switch(num) {
-    case 0:
+    case 0: /* Labeled M1 and M2 */
       stepper->pwm_a_pin = 8;
       stepper->a_in2_pin = 9;
       stepper->a_in1_pin = 10;
@@ -79,7 +90,7 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
       stepper->pwm_b_pin = 13;
       break;
     
-    case 1:
+    case 1: /* Labeled M1 and M2 */
       stepper->pwm_a_pin = 2;
       stepper->a_in2_pin = 3;
       stepper->a_in1_pin = 4;
@@ -93,50 +104,25 @@ void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
 
 void one_step(stepper_state_t *stepper, int8_t direction)
 {
-  uint8_t latch_state = 0;
   uint8_t msg[4];
   
-  if (direction == DIRECTION_BACKWARD && stepper->current_step == 0) {
-    stepper->current_step = 7;
+  if (direction == DIRECTION_BACKWARD && stepper->latch_state == &latch_states[0]) {
+    stepper->latch_state = &latch_states[7];
+  } else if (direction == DIRECTION_FORWARD && stepper->latch_state == &latch_states[7]) {
+    stepper->latch_state = &latch_states[0];
   } else {
-    stepper->current_step += direction;    
-    stepper->current_step %= 8; // roll over
+    stepper->latch_state += direction; 
   }
+  
+  /* Prepare to energize the motor coils */
   
   set_pin(stepper, stepper->pwm_a_pin, 1);
   set_pin(stepper, stepper->pwm_b_pin, 1);
   
-  switch (stepper->current_step) {
-    case 0:
-      latch_state = 0x8;
-      break;
-    case 1:
-      latch_state = 0xa;
-      break;
-    case 2:
-      latch_state = 0x2;
-      break;
-    case 3:
-      latch_state = 0x6;
-      break;    
-    case 4:
-      latch_state = 0x4;
-      break;
-    case 5:
-      latch_state = 0x5;
-      break;
-    case 6:
-      latch_state = 0x1;
-      break;
-    case 7:
-      latch_state = 0x9;
-      break;
-  }
-  
-  msg[0] = latch_state & 0x4; // A_in2
-  msg[1] = latch_state & 0x8; // A_in1
-  msg[2] = latch_state & 0x2; // B_in1
-  msg[3] = latch_state & 0x1; // B_in2
+  msg[0] = *stepper->latch_state & 0x4; // A_in2
+  msg[1] = *stepper->latch_state & 0x8; // A_in1
+  msg[2] = *stepper->latch_state & 0x2; // B_in1
+  msg[3] = *stepper->latch_state & 0x1; // B_in2
    
   set_pins(stepper, msg);
 }
