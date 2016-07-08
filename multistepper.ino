@@ -37,40 +37,34 @@ void setup()
 
 void loop()
 {
-  for (uint16_t i = 0; i<1600; i++)
+  set_pin(&stepper1, stepper1.pwm_a_pin, 1);
+  set_pin(&stepper1, stepper1.pwm_b_pin, 1);
+  set_pin(&stepper2, stepper2.pwm_a_pin, 1);
+  set_pin(&stepper2, stepper2.pwm_b_pin, 1);
+  
+  for (uint16_t i = 0; i < 2000; i++)
   {
-    one_step(&stepper1, DIRECTION_FORWARD);
     one_step(&stepper2, DIRECTION_BACKWARD);
+    one_step(&stepper1, DIRECTION_FORWARD);
+    delayMicroseconds(10);
   }
+    
+  delay(250);
   
-  delay(500);
-  set_pin(&stepper1, stepper1.pwm_a_pin, 0);
-  set_pin(&stepper1, stepper1.pwm_b_pin, 0);
-  set_pin(&stepper2, stepper2.pwm_a_pin, 0);
-  set_pin(&stepper2, stepper2.pwm_b_pin, 0);
-
-
-  
-  for (uint16_t i = 0; i<400; i++)
+  for (uint16_t i = 0; i < 2000; i++)
   {
+    one_step(&stepper2, DIRECTION_FORWARD);    
     one_step(&stepper1, DIRECTION_BACKWARD);
-    delay(5);
-    one_step(&stepper2, DIRECTION_FORWARD);
-    delay(5);
-    one_step(&stepper2, DIRECTION_FORWARD);
+    delayMicroseconds(50);
   }
-  
+
   set_pin(&stepper1, stepper1.pwm_a_pin, 0);
   set_pin(&stepper1, stepper1.pwm_b_pin, 0);
   set_pin(&stepper2, stepper2.pwm_a_pin, 0);
   set_pin(&stepper2, stepper2.pwm_b_pin, 0);
-
   
-  delay(25000);
+  delay(25000);  
 }
-
-
-
 
 
 void init_stepper(uint8_t num, uint8_t i2c_addr, stepper_state_t *stepper)
@@ -114,11 +108,6 @@ void one_step(stepper_state_t *stepper, int8_t direction)
     stepper->latch_state += direction; 
   }
   
-  /* Prepare to energize the motor coils */
-  
-  set_pin(stepper, stepper->pwm_a_pin, 1);
-  set_pin(stepper, stepper->pwm_b_pin, 1);
-  
   msg[0] = *stepper->latch_state & 0x4; // A_in2
   msg[1] = *stepper->latch_state & 0x8; // A_in1
   msg[2] = *stepper->latch_state & 0x2; // B_in1
@@ -139,7 +128,13 @@ static void set_pins(stepper_state_t *stepper, uint8_t *values)
   
   Wire.beginTransmission(stepper->i2c_addr);
 
-  /* A_in2_pin */
+  /* 
+    Correct order in the message
+      1. A_in2_pin
+      2. A_in1_pin
+      3. B_in1_pin
+      4. B_in2_pin
+   */
   Wire.write(LED0_ON_L + 4 * stepper->a_in2_pin);
 
   for (i = 0; i < 4; i++) {
@@ -159,8 +154,10 @@ void init_pca9685(uint8_t i2c_addr, uint16_t freq_Hz)
 {
   Wire.begin();
  
-  /* Hack to increase I2C speed for faster comms */
-  #define TWI_FREQ 800000L
+  /* Hack to increase I2C speed for faster comms 
+     NOTE: for my motors 800000L is too fast if only motor is used
+   */
+  #define TWI_FREQ 400000L
   TWBR = ((F_CPU / TWI_FREQ) - 16) / 2;
   
   // reset PCA9685
